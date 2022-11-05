@@ -70,3 +70,24 @@ export class Program<A extends string, U extends string> {
     return prog;
   }
 }
+
+export function initCanvas(
+  width: number,
+  height: number
+): {
+  canvas: HTMLCanvasElement;
+  gl: WebGLRenderingContext;
+} {
+  const canvas = document.createElement("canvas");
+  canvas.setAttribute("width", width.toString());
+  canvas.setAttribute("height", height.toString());
+  const gl = canvas.getContext("webgl");
+
+  if (!gl) {
+    throw "Browser does not support WebGL";
+  }
+  gl.clearColor(0, 0, 0, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  return { canvas, gl };
+}

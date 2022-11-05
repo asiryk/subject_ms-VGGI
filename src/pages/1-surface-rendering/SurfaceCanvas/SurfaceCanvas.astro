@@ -3,7 +3,7 @@
   import vertex from "./vertex.glsl";
   import { TrackballRotator } from "../../../lib/trackball-rotator.js";
   import { Matrix4, Vector3, toRadians } from "@math.gl/core";
-  import { Program } from "../../../lib/webGL";
+  import { Program, initCanvas } from "../../../lib/webGL";
 
   enum Uniforms {
     ModelViewProjectionMatrix = "ModelViewProjectionMatrix",
@@ -14,7 +14,7 @@
     Vertex = "vertex",
   }
 
-  let gl; // The webgl context.
+  let gl: WebGLRenderingContext; // The webgl context.
   let surface; // A surface model
   let shProgram: Program<Attributes, Uniforms>; // A shader program
   let spaceball; // A SimpleRotator object that lets the user rotate the view by mouse.
@@ -38,26 +38,14 @@
 
     this.Draw = function () {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
-      gl.vertexAttribPointer(
-        shProgram.getAttribLocation(Attributes.Vertex),
-        3,
-        gl.FLOAT,
-        false,
-        0,
-        0
-      );
-      gl.enableVertexAttribArray(
-        shProgram.getAttribLocation(Attributes.Vertex)
-      );
+      const vertex = shProgram.getAttribLocation(Attributes.Vertex);
+      gl.vertexAttribPointer(vertex, 3, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(vertex);
 
       gl.drawArrays(gl.LINE_STRIP, 0, this.count);
     };
   }
 
-  /* Draws a colored cube, along with a set of coordinate axes.
-   * (Note that the use of the above drawPrimitive function is not an efficient
-   * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
-   */
   function draw() {
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -73,7 +61,10 @@
     /* Get the view matrix from the SimpleRotator object.*/
     let modelView = spaceball.getViewMatrix();
 
-    let rotateToPointZero = new Matrix4().rotateAxis(0.7, [0.707, 0.707, 0]);
+    let rotateToPointZero = new Matrix4().rotateAxis(
+      0.7,
+      new Vector3(0.707, 0.707, 0)
+    );
     let translateToPointZero = new Matrix4().translate(new Vector3(0, 0, -10));
 
     let matAccum0 = rotateToPointZero.multiplyRight(modelView);
@@ -95,15 +86,15 @@
     surface.Draw();
   }
 
-  function CreateSurfaceData() {
-    let vertexList = [];
+  function createVertices(): number[] {
+    let vertices: number[] = [];
 
     for (let i = 0; i < 360; i += 5) {
-      vertexList.push(Math.sin(toRadians(i)), 1, Math.cos(toRadians(i)));
-      vertexList.push(Math.sin(toRadians(i)), 0, Math.cos(toRadians(i)));
+      vertices.push(Math.sin(toRadians(i)), 1, Math.cos(toRadians(i)));
+      vertices.push(Math.sin(toRadians(i)), 0, Math.cos(toRadians(i)));
     }
 
-    return vertexList;
+    return vertices;
   }
 
   /* Initialize the WebGL context. Called from init() */
@@ -117,41 +108,23 @@
     );
 
     surface = new Model("Surface");
-    surface.BufferData(CreateSurfaceData());
+    surface.BufferData(createVertices());
 
     gl.enable(gl.DEPTH_TEST);
   }
 
-  /**
-   * initialization function that will be called when the page has loaded
-   */
   function init() {
-    let canvas;
     try {
-      canvas = document.getElementById("webglcanvas");
-      gl = canvas.getContext("webgl");
-      if (!gl) {
-        throw "Browser does not support WebGL";
-      }
-    } catch (e) {
-      document.getElementById("canvas-holder").innerHTML =
-        "<p>Sorry, could not get a WebGL graphics context.</p>";
-      return;
-    }
-    try {
+      const result = initCanvas(600, 600);
+      gl = result.gl;
+      document.getElementById("canvas-root").appendChild(result.canvas);
       initGL(); // initialize the WebGL graphics context
+      // @ts-ignore
+      spaceball = new TrackballRotator(result.canvas, draw, 0);
+      draw();
     } catch (e) {
-      document.getElementById("canvas-holder").innerHTML =
-        "<p>Sorry, could not initialize the WebGL graphics context: " +
-        e +
-        "</p>";
-      return;
+      return alert(e);
     }
-
-    // @ts-ignore
-    spaceball = new TrackballRotator(canvas, draw, 0);
-
-    draw();
   }
 
   document.body.onload = init;
@@ -164,6 +137,4 @@
   (On a touch screen, you can use your finger.)
 </p>
 
-<div id="canvas-holder">
-  <canvas width="600" height="600" id="webglcanvas"></canvas>
-</div>
+<div id="canvas-root"></div>
