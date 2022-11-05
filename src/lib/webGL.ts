@@ -19,7 +19,6 @@ export class Program<A extends string, U extends string> {
     const vShader = this.createShader(this.gl.VERTEX_SHADER, vertex);
     const fShader = this.createShader(this.gl.FRAGMENT_SHADER, fragment);
     this.program = this.createProgram(vShader, fShader);
-    this.gl.useProgram(this.program);
 
     // Look up attribute locations (gpu memory)
     this.attributes = new Map(
@@ -38,6 +37,10 @@ export class Program<A extends string, U extends string> {
     );
   }
 
+  public getWebGLProgram(): WebGLProgram {
+    return this.program;
+  }
+
   public setUniform(uniform: U, cpuMem: NumericArray): void {
     const gpuMem = this.uniforms.get(uniform);
     if (cpuMem instanceof Matrix4) {
@@ -51,9 +54,9 @@ export class Program<A extends string, U extends string> {
     attrubute: A,
     cpuMem: NumericArray,
     size: number,
-    type: GLenum
   ): void {
     // https://web.archive.org/web/20221105152646/https://webglfundamentals.org/webgl/lessons/webgl-fundamentals.html
+    const type = this.gl.FLOAT;
     const cpuMemBuf = new Float32Array(cpuMem);
     const gpuMem = this.attributes.get(attrubute);
     const gpuBuffer = this.gl.createBuffer();

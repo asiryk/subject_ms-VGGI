@@ -16,10 +16,23 @@
 
   function createVertices(): number[] {
     let vertices: number[] = [];
+    const h = 1;
+    const p = 0.5;
 
-    for (let i = 0; i < 360; i += 5) {
-      vertices.push(Math.sin(toRadians(i)), 1, Math.cos(toRadians(i)));
-      vertices.push(Math.sin(toRadians(i)), 0, Math.cos(toRadians(i)));
+    for (let z = -h; z <= h; z += 0.1) {
+      for (let b = 0; b <= 360; b += 5) {
+        const x = ((Math.abs(z) - h) ** 2 / (2 * p)) * Math.cos(toRadians(b));
+        const y = ((Math.abs(z) - h) ** 2 / (2 * p)) * Math.sin(toRadians(b));
+        vertices.push(x, y, z);
+      }
+    }
+
+    for (let b = 0; b <= 360; b += 20) {
+      for (let z = -h; z <= h; z += 0.1) {
+        const x = ((Math.abs(z) - h) ** 2 / (2 * p)) * Math.cos(toRadians(b));
+        const y = ((Math.abs(z) - h) ** 2 / (2 * p)) * Math.sin(toRadians(b));
+        vertices.push(x, y, z);
+      }
     }
 
     return vertices;
@@ -31,6 +44,7 @@
     surface: VertexData,
     rotator: TrackballRotator
   ) {
+    gl.useProgram(program.getWebGLProgram());
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // removes black bg
 
@@ -43,7 +57,7 @@
     const modelView = rotator.getViewMatrix();
     const rotateToPointZero = new Matrix4().rotateAxis(
       0.7,
-      new Vector3(0.707, 0.707, 0)
+      new Vector3(0, 0, 0) // POV from top
     );
     const translateToPointZero = new Matrix4().translate(
       new Vector3(0, 0, -10)
@@ -60,7 +74,8 @@
 
   function init() {
     try {
-      const { gl, canvas } = initCanvas(600, 600);
+      const size = Math.min(600, window.innerWidth - 50);
+      const { gl, canvas } = initCanvas(size, size);
       const program = new Program(
         gl,
         vertex,
@@ -72,8 +87,7 @@
       program.setAttribute(
         Attributes.Vertex,
         surface.getData(),
-        surface.getSize(),
-        gl.FLOAT
+        surface.getSize()
       );
       const rotator = new TrackballRotator(canvas, null, 0);
       rotator.setCallback(() => draw(gl, program, surface, rotator));
@@ -88,11 +102,8 @@
   init();
 </script>
 
-<h2>A Cube with "Trackball" Mouse Rotation</h2>
-
-<p id="message">
-  Drag your mouse on the cube to rotate it.<br />
-  (On a touch screen, you can use your finger.)
-</p>
+<h2 class="text-center text-5xl font-bold text-slate-300 mb-10">
+  Parabolic Humming-Top
+</h2>
 
 <div id="canvas-root"></div>
