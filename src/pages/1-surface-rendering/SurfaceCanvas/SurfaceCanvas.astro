@@ -2,88 +2,16 @@
   import fragment from "./fragment.glsl";
   import vertex from "./vertex.glsl";
   import { TrackballRotator } from "../../../lib/trackball-rotator.js";
-  import { Matrix4, Vector3, toRadians } from "@math.gl/core";
-  import { Program, initCanvas } from "../../../lib/webGL";
+  import { Matrix4, Vector3, Vector4, toRadians } from "@math.gl/core";
+  import { Program, initCanvas, VertexData } from "../../../lib/webGL";
 
   enum Uniforms {
-    ModelViewProjectionMatrix = "ModelViewProjectionMatrix",
+    ProjectionMatrix = "projection_matrix",
     Color = "color",
   }
 
   enum Attributes {
     Vertex = "vertex",
-  }
-
-  let gl: WebGLRenderingContext; // The webgl context.
-  let surface; // A surface model
-  let shProgram: Program<Attributes, Uniforms>; // A shader program
-  let spaceball; // A SimpleRotator object that lets the user rotate the view by mouse.
-
-  // Constructor
-  function Model(name) {
-    this.name = name;
-    this.iVertexBuffer = gl.createBuffer();
-    this.count = 0;
-
-    this.BufferData = function (vertices) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
-      gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Float32Array(vertices),
-        gl.STREAM_DRAW
-      );
-
-      this.count = vertices.length / 3;
-    };
-
-    this.Draw = function () {
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
-      const vertex = shProgram.getAttribLocation(Attributes.Vertex);
-      gl.vertexAttribPointer(vertex, 3, gl.FLOAT, false, 0, 0);
-      gl.enableVertexAttribArray(vertex);
-
-      gl.drawArrays(gl.LINE_STRIP, 0, this.count);
-    };
-  }
-
-  function draw() {
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    /* Set the values of the projection transformation */
-    let projection = new Matrix4().perspective({
-      fovy: Math.PI / 8,
-      aspect: 1,
-      near: 8,
-      far: 12,
-    });
-
-    /* Get the view matrix from the SimpleRotator object.*/
-    let modelView = spaceball.getViewMatrix();
-
-    let rotateToPointZero = new Matrix4().rotateAxis(
-      0.7,
-      new Vector3(0.707, 0.707, 0)
-    );
-    let translateToPointZero = new Matrix4().translate(new Vector3(0, 0, -10));
-
-    let matAccum0 = rotateToPointZero.multiplyRight(modelView);
-    let matAccum1 = translateToPointZero.multiplyRight(matAccum0);
-
-    /* Multiply the projection matrix times the modelview matrix to give the
-       combined transformation matrix, and send that to the shader program. */
-    let modelViewProjection = projection.multiplyRight(matAccum1);
-
-    gl.uniformMatrix4fv(
-      shProgram.getUniformLocation(Uniforms.ModelViewProjectionMatrix),
-      false,
-      modelViewProjection
-    );
-
-    /* Draw the six faces of a cube, with different colors. */
-    gl.uniform4fv(shProgram.getUniformLocation(Uniforms.Color), [1, 1, 0, 1]);
-
-    surface.Draw();
   }
 
   function createVertices(): number[] {
@@ -97,37 +25,67 @@
     return vertices;
   }
 
-  /* Initialize the WebGL context. Called from init() */
-  function initGL() {
-    shProgram = new Program(
-      gl,
-      vertex,
-      fragment,
-      Object.values(Attributes),
-      Object.values(Uniforms)
+  function draw(
+    gl: WebGLRenderingContext,
+    program: Program<Attributes, Uniforms>,
+    surface: VertexData,
+    rotator: TrackballRotator
+  ) {
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // removes black bg
+
+    const projection = new Matrix4().perspective({
+      fovy: Math.PI / 8,
+      aspect: 1,
+      near: 8,
+      far: 12,
+    });
+    const modelView = rotator.getViewMatrix();
+    const rotateToPointZero = new Matrix4().rotateAxis(
+      0.7,
+      new Vector3(0.707, 0.707, 0)
     );
+    const translateToPointZero = new Matrix4().translate(
+      new Vector3(0, 0, -10)
+    );
+    const matAccum0 = rotateToPointZero.multiplyRight(modelView);
+    const matAccum1 = translateToPointZero.multiplyRight(matAccum0);
+    const modelViewProjection = projection.multiplyRight(matAccum1);
 
-    surface = new Model("Surface");
-    surface.BufferData(createVertices());
+    program.setUniform(Uniforms.ProjectionMatrix, modelViewProjection);
+    program.setUniform(Uniforms.Color, new Vector4(1, 1, 0, 1));
 
-    gl.enable(gl.DEPTH_TEST);
+    gl.drawArrays(gl.LINE_STRIP, 0, surface.getCount());
   }
 
   function init() {
     try {
-      const result = initCanvas(600, 600);
-      gl = result.gl;
-      document.getElementById("canvas-root").appendChild(result.canvas);
-      initGL(); // initialize the WebGL graphics context
-      // @ts-ignore
-      spaceball = new TrackballRotator(result.canvas, draw, 0);
-      draw();
+      const { gl, canvas } = initCanvas(600, 600);
+      const program = new Program(
+        gl,
+        vertex,
+        fragment,
+        Object.values(Attributes),
+        Object.values(Uniforms)
+      );
+      const surface = new VertexData(createVertices(), 3);
+      program.setAttribute(
+        Attributes.Vertex,
+        surface.getData(),
+        surface.getSize(),
+        gl.FLOAT
+      );
+      const rotator = new TrackballRotator(canvas, null, 0);
+      rotator.setCallback(() => draw(gl, program, surface, rotator));
+      draw(gl, program, surface, rotator);
+
+      document.getElementById("canvas-root").appendChild(canvas);
     } catch (e) {
       return alert(e);
     }
   }
 
-  document.body.onload = init;
+  init();
 </script>
 
 <h2>A Cube with "Trackball" Mouse Rotation</h2>

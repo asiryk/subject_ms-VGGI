@@ -1,3 +1,5 @@
+import { NumericArray, Matrix4, Vector4 } from "@math.gl/core";
+
 export class Program<A extends string, U extends string> {
   private readonly gl: WebGLRenderingContext;
   private readonly program: WebGLProgram;
@@ -19,12 +21,15 @@ export class Program<A extends string, U extends string> {
     this.program = this.createProgram(vShader, fShader);
     this.gl.useProgram(this.program);
 
+    // Look up attribute locations (gpu memory)
     this.attributes = new Map(
       attributes.map((attr) => [
         attr,
         this.gl.getAttribLocation(this.program, attr),
       ])
     );
+
+    // Look up uniform locations (gpu memory)
     this.uniforms = new Map(
       uniforms.map((uniform) => [
         uniform,
@@ -33,12 +38,29 @@ export class Program<A extends string, U extends string> {
     );
   }
 
-  public getAttribLocation(attributeName: A): GLint {
-    return this.attributes.get(attributeName);
+  public setUniform(uniform: U, cpuMem: NumericArray): void {
+    const gpuMem = this.uniforms.get(uniform);
+    if (cpuMem instanceof Matrix4) {
+      this.gl.uniformMatrix4fv(gpuMem, false, cpuMem);
+    } else if (cpuMem instanceof Vector4) {
+      this.gl.uniform4fv(gpuMem, cpuMem);
+    }
   }
 
-  public getUniformLocation(uniformName: U): WebGLUniformLocation {
-    return this.uniforms.get(uniformName);
+  public setAttribute(
+    attrubute: A,
+    cpuMem: NumericArray,
+    size: number,
+    type: GLenum
+  ): void {
+    // https://web.archive.org/web/20221105152646/https://webglfundamentals.org/webgl/lessons/webgl-fundamentals.html
+    const cpuMemBuf = new Float32Array(cpuMem);
+    const gpuMem = this.attributes.get(attrubute);
+    const gpuBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, gpuBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, cpuMemBuf, this.gl.STREAM_DRAW);
+    this.gl.enableVertexAttribArray(gpuMem);
+    this.gl.vertexAttribPointer(gpuMem, size, type, false, 0, 0);
   }
 
   private createShader(type: GLenum, source: string): WebGLShader {
@@ -71,6 +93,25 @@ export class Program<A extends string, U extends string> {
   }
 }
 
+export class VertexData {
+  constructor(
+    private readonly array: number[],
+    private readonly size: number
+  ) {}
+
+  public getData(): number[] {
+    return this.array;
+  }
+
+  public getSize(): number {
+    return this.size;
+  }
+
+  public getCount(): number {
+    return this.array.length / this.size;
+  }
+}
+
 export function initCanvas(
   width: number,
   height: number
@@ -88,6 +129,7 @@ export function initCanvas(
   }
   gl.clearColor(0, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
 
   return { canvas, gl };
 }
