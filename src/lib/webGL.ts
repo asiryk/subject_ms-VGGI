@@ -50,11 +50,7 @@ export class Program<A extends string, U extends string> {
     }
   }
 
-  public setAttribute(
-    attrubute: A,
-    cpuMem: NumericArray,
-    size: number,
-  ): void {
+  public setAttribute(attrubute: A, cpuMem: NumericArray, size: number): void {
     // https://web.archive.org/web/20221105152646/https://webglfundamentals.org/webgl/lessons/webgl-fundamentals.html
     const type = this.gl.FLOAT;
     const cpuMemBuf = new Float32Array(cpuMem);
