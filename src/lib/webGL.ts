@@ -37,8 +37,8 @@ export class Program<A extends string, U extends string> {
     );
   }
 
-  public getWebGLProgram(): WebGLProgram {
-    return this.program;
+  public use(useProgram: (prog: WebGLProgram) => void): void {
+    useProgram(this.program);
   }
 
   public setUniform(uniform: U, cpuMem: NumericArray): void {
