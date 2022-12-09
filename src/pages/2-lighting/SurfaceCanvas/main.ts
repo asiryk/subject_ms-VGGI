@@ -48,12 +48,13 @@ function draw(
   gl.clearColor(0, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // removes black bg
 
-  const projection = new Matrix4().perspective({
-    fovy: Math.PI / 8,
-    aspect: 1,
-    near: 8,
-    far: 12,
+  const ortho = new Matrix4().ortho({
+    left: 1,
+    right: -1,
+    bottom: 1,
+    top: -1,
   });
+
   const modelView = rotator.getViewMatrix();
   const rotateToPointZero = new Matrix4().rotateAxis(
     0.7,
@@ -64,7 +65,7 @@ function draw(
   const matAccum1 = translateToPointZero.multiplyRight(matAccum0);
 
   program.setUniform(Uniforms.ModelViewMatrix, matAccum1);
-  program.setUniform(Uniforms.ProjectionMatrix, projection);
+  program.setUniform(Uniforms.ProjectionMatrix, ortho);
   program.setUniform(Uniforms.Color, new Vector4(1, 1, 0, 1));
 
   gl.drawArrays(gl.LINE_STRIP, 0, surface.getCount());
