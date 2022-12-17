@@ -18,25 +18,26 @@ enum Attributes {
 function createVertices(): number[] {
   const vertices: number[] = [];
   const INT_MULT = 10;
-  const h = 1;
-  const p = 0.5;
-  const zStep = 0.1;
-  const bStep = 5;
+  const DEG = 360;
+  const H = 1;
+  const P = 0.5;
+  const zStep = H / 10;
+  const bStep = DEG / 72;
 
-  for (let z1 = -h * INT_MULT; z1 < h * INT_MULT; z1 += zStep * INT_MULT) {
+  for (let z1 = -H * INT_MULT; z1 < H * INT_MULT; z1 += zStep * INT_MULT) {
     const z = z1 / INT_MULT;
 
-    for (let b = 0; b <= 360; b += bStep) {
-      const x = ((Math.abs(z) - h) ** 2 / (2 * p)) * Math.cos(toRadians(b));
-      const y = ((Math.abs(z) - h) ** 2 / (2 * p)) * Math.sin(toRadians(b));
+    for (let b = 0; b <= DEG; b += bStep) {
+      const x = ((Math.abs(z) - H) ** 2 / (2 * P)) * Math.cos(toRadians(b));
+      const y = ((Math.abs(z) - H) ** 2 / (2 * P)) * Math.sin(toRadians(b));
       vertices.push(x, y, z);
 
       const x1 =
-        ((Math.abs(z + zStep) - h) ** 2 / (2 * p)) *
+        ((Math.abs(z + zStep) - H) ** 2 / (2 * P)) *
         Math.cos(toRadians(b + bStep));
 
       const y1 =
-        ((Math.abs(z + zStep) - h) ** 2 / (2 * p)) *
+        ((Math.abs(z + zStep) - H) ** 2 / (2 * P)) *
         Math.sin(toRadians(b + bStep));
       vertices.push(x1, y1, z + zStep);
     }
