@@ -1,37 +1,43 @@
 import fragment from "./fragment.glsl";
 import vertex from "./vertex.glsl";
 import { TrackballRotator } from "../../../lib/trackball-rotator.js";
-import { Matrix4, Vector3, Vector4, toRadians } from "@math.gl/core";
+import { Matrix4, Vector3, toRadians } from "@math.gl/core";
 import { Program, initCanvas, VertexData } from "../../../lib/webGL";
 
 enum Uniforms {
   ModelViewMatrix = "model_view_matrix",
   ProjectionMatrix = "projection_matrix",
-  Color = "color",
+  NormalMatrix = "normal_matrix",
 }
 
 enum Attributes {
-  Vertex = "vertex",
+  Vertices = "vertices",
 }
 
 function createVertices(): number[] {
   const vertices: number[] = [];
+  const INT_MULT = 10;
   const h = 1;
   const p = 0.5;
+  const zStep = 0.1;
+  const bStep = 5;
 
-  for (let z = -h; z <= h; z += 0.1) {
-    for (let b = 0; b <= 360; b += 5) {
+  for (let z1 = -h * INT_MULT; z1 < h * INT_MULT; z1 += zStep * INT_MULT) {
+    const z = z1 / INT_MULT;
+
+    for (let b = 0; b <= 360; b += bStep) {
       const x = ((Math.abs(z) - h) ** 2 / (2 * p)) * Math.cos(toRadians(b));
       const y = ((Math.abs(z) - h) ** 2 / (2 * p)) * Math.sin(toRadians(b));
       vertices.push(x, y, z);
-    }
-  }
 
-  for (let b = 0; b <= 360; b += 20) {
-    for (let z = -h; z <= h; z += 0.1) {
-      const x = ((Math.abs(z) - h) ** 2 / (2 * p)) * Math.cos(toRadians(b));
-      const y = ((Math.abs(z) - h) ** 2 / (2 * p)) * Math.sin(toRadians(b));
-      vertices.push(x, y, z);
+      const x1 =
+        ((Math.abs(z + zStep) - h) ** 2 / (2 * p)) *
+        Math.cos(toRadians(b + bStep));
+
+      const y1 =
+        ((Math.abs(z + zStep) - h) ** 2 / (2 * p)) *
+        Math.sin(toRadians(b + bStep));
+      vertices.push(x1, y1, z + zStep);
     }
   }
 
@@ -48,27 +54,30 @@ function draw(
   gl.clearColor(0, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // removes black bg
 
-  const ortho = new Matrix4().ortho({
+  const projection = new Matrix4().ortho({
     left: 1,
     right: -1,
     bottom: 1,
     top: -1,
   });
 
-  const modelView = rotator.getViewMatrix();
+  const rotatorView = rotator.getViewMatrix();
   const rotateToPointZero = new Matrix4().rotateAxis(
     0.7,
     new Vector3(0, 0, 0) // POV from top
   );
   const translateToPointZero = new Matrix4().translate(new Vector3(0, 0, -10));
-  const matAccum0 = rotateToPointZero.multiplyRight(modelView);
-  const matAccum1 = translateToPointZero.multiplyRight(matAccum0);
+  const matAccum0 = rotateToPointZero.multiplyRight(rotatorView);
+  const modelView = translateToPointZero.multiplyRight(matAccum0);
 
-  program.setUniform(Uniforms.ModelViewMatrix, matAccum1);
-  program.setUniform(Uniforms.ProjectionMatrix, ortho);
-  program.setUniform(Uniforms.Color, new Vector4(1, 1, 0, 1));
+  // create normal matrix from modelView matrix
+  const normalMatrix = new Matrix4().copy(modelView).invert().transpose();
 
-  gl.drawArrays(gl.LINE_STRIP, 0, surface.getCount());
+  program.setUniform(Uniforms.ModelViewMatrix, modelView);
+  program.setUniform(Uniforms.ProjectionMatrix, projection);
+  program.setUniform(Uniforms.NormalMatrix, normalMatrix);
+
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, surface.getCount());
 }
 
 export function init(attachRoot: HTMLElement) {
@@ -82,9 +91,10 @@ export function init(attachRoot: HTMLElement) {
       Object.values(Attributes),
       Object.values(Uniforms)
     );
-    const surface = new VertexData(createVertices(), 3);
+    const vertices = createVertices();
+    const surface = new VertexData(vertices, 3);
     program.setAttribute(
-      Attributes.Vertex,
+      Attributes.Vertices,
       surface.getData(),
       surface.getSize()
     );
