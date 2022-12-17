@@ -3,6 +3,7 @@ import vertex from "./vertex.glsl";
 import { TrackballRotator } from "../../../lib/trackball-rotator.js";
 import { Matrix4, Vector3, toRadians } from "@math.gl/core";
 import { Program, initCanvas, VertexData } from "../../../lib/webGL";
+import { Pane, TpChangeEvent } from "tweakpane";
 
 enum Uniforms {
   ModelViewMatrix = "model_view_matrix",
@@ -80,6 +81,19 @@ function draw(
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, surface.getCount());
 }
 
+function initTweakpane() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pane = new Pane() as any;
+
+  const PARAMS = {
+    light: { x: 0, y: 0, z: 0 },
+  };
+
+  pane.addInput(PARAMS, "light", { step: 0.1 });
+
+  return pane;
+}
+
 export function init(attachRoot: HTMLElement) {
   try {
     const size = Math.min(600, window.innerWidth - 50);
@@ -101,6 +115,15 @@ export function init(attachRoot: HTMLElement) {
     const rotator = new TrackballRotator(canvas, null, 0);
     rotator.setCallback(() => draw(gl, program, surface, rotator));
     draw(gl, program, surface, rotator);
+
+    const pane = initTweakpane();
+    pane.on("change", (e: TpChangeEvent) => {
+      if (e.presetKey === "light") {
+        const { x, y, z } = e.value;
+        const position = new Vector3(x, y, z);
+        console.log(position);
+      }
+    });
 
     attachRoot.appendChild(canvas);
   } catch (e) {
