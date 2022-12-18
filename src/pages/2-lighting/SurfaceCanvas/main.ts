@@ -2,21 +2,22 @@ import fragment from "./fragment.glsl";
 import vertex from "./vertex.glsl";
 import { TrackballRotator } from "../../../lib/trackball-rotator.js";
 import { Matrix4, Vector3, toRadians } from "@math.gl/core";
-import { Program, initCanvas, VertexData } from "../../../lib/webGL";
+import { Program, initCanvas } from "../../../lib/webGL";
 import { Pane, TpChangeEvent } from "tweakpane";
 
 enum Uniforms {
   ModelViewMatrix = "model_view_matrix",
   ProjectionMatrix = "projection_matrix",
   NormalMatrix = "normal_matrix",
+  LightPosition = "light_position",
 }
 
 enum Attributes {
-  Vertices = "vertices",
+  Vertices = "vertex",
 }
 
-function createVertices(): number[] {
-  const vertices: number[] = [];
+function createVertices(): Vector3[] {
+  const vertices: Vector3[] = [];
   const INT_MULT = 10;
   const DEG = 360;
   const H = 1;
@@ -30,7 +31,7 @@ function createVertices(): number[] {
     for (let b = 0; b <= DEG; b += bStep) {
       const x = ((Math.abs(z) - H) ** 2 / (2 * P)) * Math.cos(toRadians(b));
       const y = ((Math.abs(z) - H) ** 2 / (2 * P)) * Math.sin(toRadians(b));
-      vertices.push(x, y, z);
+      vertices.push(new Vector3(x, y, z));
 
       const x1 =
         ((Math.abs(z + zStep) - H) ** 2 / (2 * P)) *
@@ -39,7 +40,7 @@ function createVertices(): number[] {
       const y1 =
         ((Math.abs(z + zStep) - H) ** 2 / (2 * P)) *
         Math.sin(toRadians(b + bStep));
-      vertices.push(x1, y1, z + zStep);
+      vertices.push(new Vector3(x1, y1, z + zStep));
     }
   }
 
@@ -49,7 +50,7 @@ function createVertices(): number[] {
 function draw(
   gl: WebGLRenderingContext,
   program: Program<Attributes, Uniforms>,
-  surface: VertexData,
+  surface: Vector3[],
   rotator: TrackballRotator
 ) {
   program.use(gl.useProgram.bind(gl));
@@ -79,7 +80,7 @@ function draw(
   program.setUniform(Uniforms.ProjectionMatrix, projection);
   program.setUniform(Uniforms.NormalMatrix, normalMatrix);
 
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, surface.getCount());
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, surface.length);
 }
 
 function initTweakpane() {
@@ -106,12 +107,11 @@ export function init(attachRoot: HTMLElement) {
       Object.values(Attributes),
       Object.values(Uniforms)
     );
-    const vertices = createVertices();
-    const surface = new VertexData(vertices, 3);
+    const surface = createVertices();
     program.setAttribute(
       Attributes.Vertices,
-      surface.getData(),
-      surface.getSize()
+      surface.flatMap((v) => v),
+      surface[0].length
     );
     const rotator = new TrackballRotator(canvas, null, 0);
     rotator.setCallback(() => draw(gl, program, surface, rotator));
@@ -122,7 +122,8 @@ export function init(attachRoot: HTMLElement) {
       if (e.presetKey === "light") {
         const { x, y, z } = e.value;
         const position = new Vector3(x, y, z);
-        console.log(position);
+        program.setUniform(Uniforms.LightPosition, position);
+        draw(gl, program, surface, rotator);
       }
     });
 
