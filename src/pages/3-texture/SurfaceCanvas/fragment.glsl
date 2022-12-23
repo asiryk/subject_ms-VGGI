@@ -4,12 +4,13 @@
    precision mediump float;
 #endif
 
-varying vec3 light;
 varying vec3 v_vertex;
 varying vec3 v_vertex_position;
+varying vec2 v_texcoord;
 
 uniform mat4 normal_matrix;
 uniform vec3 light_position;
+uniform sampler2D texture;
 
 vec3 calculate_light(vec3 position) {
     vec3 shape_color = vec3(0.21176470588235, 0.054901960784313, 0.12156862745098);
@@ -33,13 +34,13 @@ vec3 calculate_light(vec3 position) {
         float spec_angle = max(dot(view_dir, reflect_dir), 0.0);
         spec = pow(spec_angle, 32.);
     }
-    // vec3 reflect_direction = reflect(-light_direction, normal);
-    // float spec = pow(max(dot(light_direction, reflect_direction), 0.0), 32.);
     vec3 specular = specular_strength * spec * light_color;
 
     return ambient + diffuse + specular;
 }
 
 void main() {
-    gl_FragColor = vec4(calculate_light(v_vertex_position), 1.0);
+    vec4 light = vec4(calculate_light(v_vertex_position), 1.0);
+    vec4 tex = texture2D(texture, v_texcoord);
+    gl_FragColor = tex * light;
 }

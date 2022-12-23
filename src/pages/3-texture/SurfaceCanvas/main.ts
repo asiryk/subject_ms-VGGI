@@ -1,7 +1,7 @@
 import fragment from "./fragment.glsl";
 import vertex from "./vertex.glsl";
 import { TrackballRotator } from "../../../lib/trackball-rotator.js";
-import { Matrix4, Vector3, toRadians } from "@math.gl/core";
+import { Matrix4, Vector3, toRadians, Vector2 } from "@math.gl/core";
 import { Program, initCanvas } from "../../../lib/webGL";
 import { Pane, TpChangeEvent } from "tweakpane";
 
@@ -14,10 +14,12 @@ enum Uniforms {
 
 enum Attributes {
   Vertices = "vertex",
+  Uvs = "texcoord",
 }
 
-function createVertices(): Vector3[] {
+function createVertices(): { vertices: Vector3[]; uvs: Vector2[] } {
   const vertices: Vector3[] = [];
+  const uvs: Vector2[] = [];
   const INT_MULT = 10;
   const DEG = 360;
   const H = 1;
@@ -25,26 +27,31 @@ function createVertices(): Vector3[] {
   const zStep = H / 10;
   const bStep = DEG / 72;
 
+  const toVertex = (z: number, b: number) => {
+    const x = ((Math.abs(z) - H) ** 2 / (2 * P)) * Math.cos(toRadians(b));
+    const y = ((Math.abs(z) - H) ** 2 / (2 * P)) * Math.sin(toRadians(b));
+    return new Vector3(x, y, z);
+  };
+
+  const toUv = (z: number, b: number) => {
+    const u = (z + H) / (2 * H);
+    const v = b / DEG;
+    return new Vector2(u, v);
+  };
+
   for (let z1 = -H * INT_MULT; z1 < H * INT_MULT; z1 += zStep * INT_MULT) {
     const z = z1 / INT_MULT;
 
     for (let b = 0; b <= DEG; b += bStep) {
-      const x = ((Math.abs(z) - H) ** 2 / (2 * P)) * Math.cos(toRadians(b));
-      const y = ((Math.abs(z) - H) ** 2 / (2 * P)) * Math.sin(toRadians(b));
-      vertices.push(new Vector3(x, y, z));
+      vertices.push(toVertex(z, b));
+      uvs.push(toUv(z, b));
 
-      const x1 =
-        ((Math.abs(z + zStep) - H) ** 2 / (2 * P)) *
-        Math.cos(toRadians(b + bStep));
-
-      const y1 =
-        ((Math.abs(z + zStep) - H) ** 2 / (2 * P)) *
-        Math.sin(toRadians(b + bStep));
-      vertices.push(new Vector3(x1, y1, z + zStep));
+      vertices.push(toVertex(z + zStep, b + bStep));
+      uvs.push(toUv(z + zStep, b + bStep));
     }
   }
 
-  return vertices;
+  return { vertices, uvs };
 }
 
 function draw(
@@ -96,6 +103,18 @@ function initTweakpane() {
   return pane;
 }
 
+function loadImage(): Promise<HTMLImageElement> {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.src =
+      "/subject_ms-VGGI/texture1024x1024.jpg";
+    image.onerror = (e) => reject(e);
+    image.onload = () => {
+      resolve(image);
+    };
+  });
+}
+
 export function init(attachRoot: HTMLElement) {
   try {
     const size = Math.min(600, window.innerWidth - 50);
@@ -107,11 +126,16 @@ export function init(attachRoot: HTMLElement) {
       Object.values(Attributes),
       Object.values(Uniforms)
     );
-    const surface = createVertices();
+    const { vertices: surface, uvs } = createVertices();
     program.setAttribute(
       Attributes.Vertices,
       surface.flatMap((v) => v),
       surface[0].length
+    );
+    program.setAttribute(
+      Attributes.Uvs,
+      uvs.flatMap((v) => v),
+      uvs[0].length
     );
     const rotator = new TrackballRotator(canvas, null, 0);
     rotator.setCallback(() => draw(gl, program, surface, rotator));
@@ -125,6 +149,11 @@ export function init(attachRoot: HTMLElement) {
         program.setUniform(Uniforms.LightPosition, position);
         draw(gl, program, surface, rotator);
       }
+    });
+
+    loadImage().then((image) => {
+      program.setTexture(image);
+      draw(gl, program, surface, rotator);
     });
 
     attachRoot.appendChild(canvas);
