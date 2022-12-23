@@ -10,6 +10,9 @@ enum Uniforms {
   ProjectionMatrix = "projection_matrix",
   NormalMatrix = "normal_matrix",
   LightPosition = "light_position",
+  TextureScale = "texture_scale",
+  TexturePivot = "texture_pivot",
+  TexturePivotUV = "texture_pivot_uv",
 }
 
 enum Attributes {
@@ -96,9 +99,19 @@ function initTweakpane() {
 
   const PARAMS = {
     light: { x: 0, y: 0, z: 0 },
+    texScale: { x: 0, y: 0 },
+    texPivot: { x: 0, y: 0 },
   };
 
-  pane.addInput(PARAMS, "light", { step: 0.1 });
+  pane.addInput(PARAMS, "light", {});
+  pane.addInput(PARAMS, "texScale", {
+    x: { step: 0.1, min: 1 },
+    y: { step: 0.1, min: 1 },
+  });
+  pane.addInput(PARAMS, "texPivot", {
+    x: { step: 0.1, min: -1 },
+    y: { step: 0.1, min: -1 },
+  });
 
   return pane;
 }
@@ -106,8 +119,7 @@ function initTweakpane() {
 function loadImage(): Promise<HTMLImageElement> {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
-    image.src =
-      "/subject_ms-VGGI/texture1024x1024.jpg";
+    image.src = "/subject_ms-VGGI/texture1024x1024.jpg";
     image.onerror = (e) => reject(e);
     image.onload = () => {
       resolve(image);
@@ -142,13 +154,30 @@ export function init(attachRoot: HTMLElement) {
     draw(gl, program, surface, rotator);
 
     const pane = initTweakpane();
+    program.setUniform(Uniforms.TextureScale, new Vector2(1, 1));
+    program.setUniform(Uniforms.LightPosition, new Vector3(0, 0, 0));
+    draw(gl, program, surface, rotator);
     pane.on("change", (e: TpChangeEvent) => {
       if (e.presetKey === "light") {
         const { x, y, z } = e.value;
         const position = new Vector3(x, y, z);
         program.setUniform(Uniforms.LightPosition, position);
-        draw(gl, program, surface, rotator);
       }
+
+      if (e.presetKey === "texScale") {
+        const { x, y } = e.value;
+        const scale = new Vector2(x, y);
+        program.setUniform(Uniforms.TextureScale, scale);
+      }
+
+      if (e.presetKey === "texPivot") {
+        console.log(e.value);
+        const { x, y } = e.value;
+        const scale = new Vector2(x, y);
+        program.setUniform(Uniforms.TexturePivot, scale);
+      }
+
+      draw(gl, program, surface, rotator);
     });
 
     loadImage().then((image) => {
@@ -156,8 +185,21 @@ export function init(attachRoot: HTMLElement) {
       draw(gl, program, surface, rotator);
     });
 
+    document.onkeydown = (e) => {
+      if (e.key === "ArrowUp") {
+        console.log("up");
+      } else if (e.key === "ArrowDown") {
+        console.log("down");
+      } else if (e.key === "ArrowLeft") {
+        console.log("left");
+      } else if (e.key === "ArrowRight") {
+        console.log("right");
+      }
+    };
+
     attachRoot.appendChild(canvas);
   } catch (e) {
+    console.error(e);
     return alert(e);
   }
 }
