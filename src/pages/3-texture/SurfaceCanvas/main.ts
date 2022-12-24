@@ -219,13 +219,13 @@ export function init(attachRoot: HTMLElement) {
 
     document.onkeydown = (e) => {
       if (e.key === "ArrowUp") {
-        console.log("up");
+        program.setUniform(Uniforms.TexturePivot, [1, 0]);
       } else if (e.key === "ArrowDown") {
-        console.log("down");
+        program.setUniform(Uniforms.TexturePivot, [-1, 0]);
       } else if (e.key === "ArrowLeft") {
-        console.log("left");
+        program.setUniform(Uniforms.TexturePivot, [0, -1]);
       } else if (e.key === "ArrowRight") {
-        console.log("right");
+        program.setUniform(Uniforms.TexturePivot, [0, 1]);
       }
     };
 
