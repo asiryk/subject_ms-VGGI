@@ -41,7 +41,7 @@ export class Program<A extends string, U extends string> {
     useProgram(this.program);
   }
 
-  public setUniform(uniform: U, cpuMem: NumericArray): void {
+  public setUniform(uniform: U, cpuMem: NumericArray | number): void {
     const gpuMem = this.uniforms.get(uniform);
     if (cpuMem instanceof Matrix4) {
       this.gl.uniformMatrix4fv(gpuMem, false, cpuMem);
@@ -51,7 +51,9 @@ export class Program<A extends string, U extends string> {
       this.gl.uniform3fv(gpuMem, cpuMem);
     } else if (cpuMem instanceof Vector2) {
       this.gl.uniform2fv(gpuMem, cpuMem);
-    } else {
+    } else if (typeof cpuMem === "number") {
+      this.gl.uniform1f(gpuMem, cpuMem);
+    }else {
       throw new Error("Unsupported type");
     }
   }

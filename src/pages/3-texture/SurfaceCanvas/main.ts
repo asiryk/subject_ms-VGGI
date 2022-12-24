@@ -10,14 +10,15 @@ enum Uniforms {
   ProjectionMatrix = "projection_matrix",
   NormalMatrix = "normal_matrix",
   LightPosition = "light_position",
-  TextureScale = "texture_scale",
-  TexturePivot = "texture_pivot",
-  TexturePivotUV = "texture_pivot_uv",
+  TextureScale = "u_texture_scale",
+  TexturePivot = "u_texture_center",
+  TextureRotAxis = "u_texture_rot_axis",
+  TextureRotAngleDeg = "u_texture_rot_angle_deg",
 }
 
 enum Attributes {
-  Vertices = "vertex",
-  Uvs = "texcoord",
+  Vertices = "a_vertex",
+  Uvs = "a_tex_coord_uv",
 }
 
 function createVertices(): { vertices: Vector3[]; uvs: Vector2[] } {
@@ -106,6 +107,8 @@ function initTweakpane() {
     light: { x: 0, y: 0, z: 0 },
     texScale: { x: 0, y: 0 },
     texPivot: { x: 0, y: 0 },
+    texRotAxis: { x: 0, y: 0 },
+    texRotAngle: 0,
   };
 
   pane.addInput(PARAMS, "light", {});
@@ -116,6 +119,17 @@ function initTweakpane() {
   pane.addInput(PARAMS, "texPivot", {
     x: { step: 0.1, min: -1 },
     y: { step: 0.1, min: -1 },
+  });
+
+  pane.addInput(PARAMS, "texRotAxis", {
+    x: { step: 0.1 },
+    y: { step: 0.1 },
+  });
+
+  pane.addInput(PARAMS, "texRotAngle", {
+    step: 1,
+    min: -360,
+    max: 360,
   });
 
   return pane;
@@ -161,6 +175,8 @@ export function init(attachRoot: HTMLElement) {
     const pane = initTweakpane();
     program.setUniform(Uniforms.TextureScale, new Vector2(1, 1));
     program.setUniform(Uniforms.LightPosition, new Vector3(0, 0, 0));
+    program.setUniform(Uniforms.TextureRotAxis, new Vector2(0, 0));
+    program.setUniform(Uniforms.TextureRotAngleDeg, 0);
     draw(gl, program, surface, rotator);
     pane.on("change", (e: TpChangeEvent) => {
       if (e.presetKey === "light") {
@@ -180,6 +196,17 @@ export function init(attachRoot: HTMLElement) {
         const { x, y } = e.value;
         const scale = new Vector2(x, y);
         program.setUniform(Uniforms.TexturePivot, scale);
+      }
+
+      if (e.presetKey === "texRotAxis") {
+        const { x, y } = e.value;
+        const axis = new Vector2(x, y);
+        program.setUniform(Uniforms.TextureRotAxis, axis);
+      }
+
+      if (e.presetKey === "texRotAngle") {
+        const deg = e.value;
+        program.setUniform(Uniforms.TextureRotAngleDeg, deg);
       }
 
       draw(gl, program, surface, rotator);
