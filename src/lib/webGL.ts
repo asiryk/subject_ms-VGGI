@@ -1,4 +1,10 @@
-import { NumericArray, Matrix4, Vector4, Vector3, Vector2 } from "@math.gl/core";
+import {
+  NumericArray,
+  Matrix4,
+  Vector4,
+  Vector3,
+  Vector2,
+} from "@math.gl/core";
 
 export class Program<A extends string, U extends string> {
   private readonly gl: WebGLRenderingContext;
@@ -53,7 +59,7 @@ export class Program<A extends string, U extends string> {
       this.gl.uniform2fv(gpuMem, cpuMem);
     } else if (typeof cpuMem === "number") {
       this.gl.uniform1f(gpuMem, cpuMem);
-    }else {
+    } else {
       throw new Error("Unsupported type");
     }
   }
@@ -73,9 +79,24 @@ export class Program<A extends string, U extends string> {
   public setTexture(image: HTMLImageElement): void {
     const texture = this.gl.createTexture();
     this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
-    this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, image);
+    this.gl.texParameteri(
+      this.gl.TEXTURE_2D,
+      this.gl.TEXTURE_MIN_FILTER,
+      this.gl.LINEAR
+    );
+    this.gl.texParameteri(
+      this.gl.TEXTURE_2D,
+      this.gl.TEXTURE_MAG_FILTER,
+      this.gl.LINEAR
+    );
+    this.gl.texImage2D(
+      this.gl.TEXTURE_2D,
+      0,
+      this.gl.RGBA,
+      this.gl.RGBA,
+      this.gl.UNSIGNED_BYTE,
+      image
+    );
   }
 
   private createShader(type: GLenum, source: string): WebGLShader {

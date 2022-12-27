@@ -1,0 +1,34 @@
+---
+import Card from "../../components/Card.astro";
+import Layout from "../../components/Layout.astro";
+---
+
+<Layout title="#0 Bachelor works">
+  <main>
+    <h1 class="text-center text-5xl font-bold text-slate-300 mb-10">
+      Works for bachelor classes
+    </h1>
+    <ul class="card-list-grid">
+      <Card
+        href="lsystem-tree/"
+        title="#0 L-System Tree"
+        body="Recursive tree generation using L-Systems"
+      />
+    </ul>
+  </main>
+</Layout>
+
+<style>
+  main {
+    margin: auto;
+    padding: 1.5rem;
+    max-width: 60ch;
+  }
+
+  .card-list-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 0;
+  }
+</style>
